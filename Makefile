@@ -4,15 +4,6 @@ RWNX_VERS_NUM := 6.5.2.7
 CONFIG_AIC8800_WLAN_SUPPORT = m
 MODULE_NAME = aic8800_netdrv
 
-# Platform support list
-CONFIG_PLATFORM_NANOPI_M4 ?= n
-CONFIG_PLATFORM_ALLWINNER ?= n
-CONFIG_PLATFORM_INGENIC_T31 ?= n
-CONFIG_PLATFORM_INGENIC_T40 ?= n
-CONFIG_PLATFORM_INGENIC_T41 ?= n
-CONFIG_PLATFORM_FH8852v201L ?= n
-CONFIG_PLATFORM_UBUNTU ?= y
-
 # Driver mode support list
 CONFIG_VNET_MODE    ?= y
 CONFIG_RAWDATA_MODE ?= n
@@ -71,7 +62,8 @@ ccflags-$(CONFIG_FAST_INSMOD)  += -DCONFIG_FAST_INSMOD
 ccflags-$(CONFIG_APP_FASYNC)   += -DCONFIG_APP_FASYNC
 ccflags-$(CONFIG_RX_REORDER)   += -DAICWF_RX_REORDER
 
-ccflags-y += -I$(src)/.
+ccflags-y += -I$(src)/inc/
+ccflags-y += -I$(src)/sdio/.
 ccflags-y += -DCONFIG_RWNX_FULLMAC
 ccflags-$(CONFIG_RWNX_TL4) += -DCONFIG_RWNX_TL4
 ccflags-$(CONFIG_RWNX_SPLIT_TX_BUF) += -DCONFIG_RWNX_SPLIT_TX_BUF
@@ -103,35 +95,22 @@ endif
 
 obj-$(CONFIG_AIC8800_WLAN_SUPPORT) := $(MODULE_NAME).o
 $(MODULE_NAME)-y :=       \
-	rwnx_main.o           \
-	rwnx_rx.o             \
-	rwnx_tx.o             \
-	rwnx_platform.o       \
-	rwnx_term_ops.o       \
-	virt_net.o            \
-	aicwf_custom_utils.o
+	src/rwnx_main.o           \
+	src/rwnx_rx.o             \
+	src/rwnx_tx.o             \
+	src/rwnx_platform.o       \
+	src/rwnx_term_ops.o       \
+	src/virt_net.o            \
+	src/aicwf_txrxif.o        \
+	src/aicwf_custom_utils.o
 
-$(MODULE_NAME)-$(CONFIG_SDIO_SUPPORT)    += sdio_host.o
-$(MODULE_NAME)-$(CONFIG_SDIO_SUPPORT)    += aicwf_txrxif.o
-$(MODULE_NAME)-$(CONFIG_SDIO_SUPPORT)    += aicwf_sdio.o
+$(MODULE_NAME)-$(CONFIG_SDIO_SUPPORT)    += sdio/sdio_host.o
+$(MODULE_NAME)-$(CONFIG_SDIO_SUPPORT)    += sdio/aicwf_sdio.o
 
-$(MODULE_NAME)-$(CONFIG_USB_SUPPORT)     += usb_host.o
-$(MODULE_NAME)-$(CONFIG_USB_SUPPORT)     += aicwf_txrxif.o
-$(MODULE_NAME)-$(CONFIG_USB_SUPPORT)     += aicwf_usb.o
+$(MODULE_NAME)-$(CONFIG_USB_SUPPORT)     += usb/usb_host.o
+$(MODULE_NAME)-$(CONFIG_USB_SUPPORT)     += usb/aicwf_usb.o
 
 
-ifeq ($(CONFIG_PLATFORM_ROCHCHIP), y)
-KDIR  := /your_kernel_dir/kernel
-ARCH ?= arm
-CROSS_COMPILE ?= /your_cross_compile_dir/arm-linux-gnueabihf-
-ccflags-y += -DANDROID_PLATFORM
-endif
-
-ifeq ($(CONFIG_PLATFORM_ALLWINNER), y)
-ccflags-y += -DANDROID_PLATFORM
-endif
-
-ifeq ($(CONFIG_PLATFORM_UBUNTU), y)
 KDIR  := /lib/modules/$(shell uname -r)/build
 PWD   := $(shell pwd)
 KVER := $(shell uname -r)
@@ -153,59 +132,5 @@ uninstall:
 
 clean:
 	rm -rf *.o *.ko *.o.* *.mod.* modules.* Module.* .a* .o* .*.o.* *.mod .tmp* .cache.mk
-endif
 
-ifeq ($(CONFIG_PLATFORM_INGENIC_T31), y)
-ARCH ?= mips
-CROSS_COMPILE ?=mips-linux-gnu-
-PWD ?= .
-#KERNELDIR depends on the location of t31 kernel code
-KERNELDIR ?=/your_kernel_dir/kernel
-all: modules
-modules clean:
-	@$(PWD)/mklink.sh
-	$(MAKE) -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) $@
-	@$(PWD)/mklink.sh clean
-endif
-
-ifeq ($(CONFIG_PLATFORM_INGENIC_T40), y)
-ARCH ?= mips
-CROSS_COMPILE ?=mips-linux-gnu-
-PWD ?= .
-#KERNELDIR depends on the location of t40 kernel code
-KERNELDIR ?=/your_kernel_dir/kernel-4.4.94
-all: modules
-modules clean:
-	@$(PWD)/mklink.sh
-	$(MAKE) -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) $@
-	@$(PWD)/mklink.sh clean
-endif
-
-ifeq ($(CONFIG_PLATFORM_INGENIC_T41), y)
-ARCH ?= mips
-CROSS_COMPILE ?=mips-linux-gnu-
-PWD ?= .
-#KERNELDIR depends on the location of t41 kernel code
-KERNELDIR ?=/your_kernel_dir/kernel-4.4.94
-
-all: modules
-modules clean:
-	@$(PWD)/mklink.sh
-	$(MAKE) -C $(KERNELDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) $@
-	@$(PWD)/mklink.sh clean
-endif
-
-ifeq ($(CONFIG_PLATFORM_FH8852v201L), y)
-ARCH ?= arm
-CROSS_COMPILE ?= arm-fullhanv3-linux-uclibcgnueabi-
-PWD ?= .
-#KDIR depends on the location of FH8852v201L kernel code
-KDIR  := /your_kernel_dir/kernel
-all: modules
-modules:
-	make -C $(KDIR) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
-
-clean:
-	rm -rf *.o *.ko *.o.* *.mod.* modules.* Module.* .a* .o* .*.o.* *.mod .tmp* .cache.mk
-endif
 
